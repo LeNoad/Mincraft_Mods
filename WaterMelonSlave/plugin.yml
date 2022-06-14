@@ -1,0 +1,5 @@
+name: watermelonslave
+main: Main.WaterMelonSlave
+version: 2.0.0
+api-version: 1.13
+commands:
