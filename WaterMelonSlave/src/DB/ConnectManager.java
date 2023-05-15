@@ -8,6 +8,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+import DTO.BackDTO;
 import DTO.HomeDTO;
 
 public class ConnectManager {
@@ -18,10 +19,12 @@ public class ConnectManager {
 	private Connection conn;
 	private Statement stmt;
 	private Statement stmt_save;
+	private Statement stmt_update;
 	private ResultSet rs;
 	private String select_sql;
 	private String insert_sql;
 	private String delete_sql;
+	private String update_sql;
 
 	public ConnectManager() {
 		try {
@@ -94,6 +97,69 @@ public class ConnectManager {
 			close();
 			return false;
 		}
+	}
+	public boolean saveBack(BackDTO backDto) throws SQLException {
+		stmt_update = conn.createStatement();
+		update_sql = "update back set x="+backDto.getX()+", y="+backDto.getY()+", z="+backDto.getZ()+","
+								+ "world='"+backDto.getWorld()+"' where uuid='"+backDto.getUUID()+"'";
+		if(!stmt_update.execute(update_sql)) {
+			close();
+			return true;
+		} else {
+			close();
+			return false;
+		}
+	}
+	public Boolean selectBack(String uuid) {
+		Boolean status = true;
+		try {
+			stmt = conn.createStatement();
+			select_sql = "select * from back where uuid='" + uuid + "';";
+			rs = stmt.executeQuery(select_sql);
+			if(rs.next()) {
+				status = false;
+			} else {
+				status = true;
+			}
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return status;
+	}
+	
+	public Boolean insertBack(BackDTO backDto) throws SQLException {
+		stmt_save = conn.createStatement();
+		insert_sql = "insert into back (uuid, x, y, z, world) values ('"+backDto.getUUID()+"', "
+				+ "'"+backDto.getX()+"', '"+backDto.getY()+"', '"+backDto.getZ()+"', '"+backDto.getWorld()+"');";
+		if(!stmt_save.execute(insert_sql)) {
+			close();
+			return true;
+		} else {
+			close();
+			return false;
+		}
+	}
+	public BackDTO goBack(String uuid) {
+		BackDTO backDto = null;
+		try {
+			stmt = conn.createStatement();
+			select_sql = "select * from back where uuid='" + uuid + "';";
+			rs = stmt.executeQuery(select_sql);
+			while (rs.next()) {
+				backDto = new BackDTO();
+				backDto.setUUID(rs.getString("UUID"));
+				backDto.setX(Double.valueOf(rs.getString("X")));
+				backDto.setY(Double.valueOf(rs.getString("Y")));
+				backDto.setZ(Double.valueOf(rs.getString("Z")));
+				backDto.setWorld(rs.getString("world"));
+			}
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		close();
+		return backDto;
 	}
 
 	public List<HomeDTO> homeList(String uuid) {

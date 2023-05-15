@@ -18,6 +18,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import DB.ConnectManager;
+import DTO.BackDTO;
 import DTO.HomeDTO;
 import Discord.BotChatEvent;
 import Main.WaterMelonSlave;
@@ -28,7 +29,7 @@ import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
 public class ModManager extends ListenerAdapter implements Listener {
-	private static String token = "ODU2ODM2NjI5MDI0MDc5ODgy.G0l4_-.e8zfOHeEmtByQDCYfBEGd5Yx26MFDqhmu5OIU4";
+	private static String token = "ODU2ODM2NjI5MDI0MDc5ODgy.G8NA82.fEd7gva_2oQWD3Sr6IZ6iAZjGTDfuTfG60JxMQ";
 	private JDABuilder builder;
 	private JDA jda;
 	private WaterMelonSlave melonSlave;
@@ -117,6 +118,21 @@ public class ModManager extends ListenerAdapter implements Listener {
 					e.getPlayer().sendMessage(ChatColor.RED + "저장되어있는 장소가 없습니다.");
 				}
 				
+			} else if(str[0].equals("back")){
+				new BukkitRunnable() {
+					@Override
+					public void run() {
+						cm = new ConnectManager();
+						Player player = e.getPlayer();
+						BackDTO back = cm.goBack(e.getPlayer().getUniqueId().toString());
+						WorldCreator wc = new WorldCreator(back.getWorld());
+						Location loc = new Location(Bukkit.createWorld(wc), back.getX().intValue(),
+								back.getY().intValue(), back.getZ().intValue());
+						player.teleport(loc);
+						e.getPlayer().sendMessage(ChatColor.GREEN + "마지막으로 죽은 장소로 이동합니다.");
+					}
+					
+				}.runTask(melonSlave);
 			} else {
 				e.getPlayer().sendMessage(ChatColor.RED + "그런 명령어는 없습니다.");
 			}
@@ -127,16 +143,51 @@ public class ModManager extends ListenerAdapter implements Listener {
 
 	@EventHandler
 	public void onPlayerLogin(PlayerJoinEvent event) {
-		event.setJoinMessage(ChatColor.AQUA + "[Discord:븝미월드] 마인크래프트 v1.19 플러그인\n" + ChatColor.GOLD
-				+ event.getPlayer().getName() + " 님이 입장하셨습니다.");
+		cm = new ConnectManager();
+		if(!cm.selectBack(event.getPlayer().getUniqueId().toString())) {
+			event.setJoinMessage(ChatColor.AQUA + "[Discord:븝미월드] 마인크래프트 v1.19.4 플러그인\n" + ChatColor.GOLD
+					+ event.getPlayer().getName() + " 님이 입장하셨습니다.");
+		} else {
+			event.setJoinMessage(ChatColor.BLUE + "[ 첫 접속자 입니다 해당 유저의 권한을 승인합니다 ]");
+			new BukkitRunnable() {
+
+				@Override
+				public void run() {
+					// TODO Auto-generated method stub
+					BackDTO backDto = new BackDTO();
+					Player player = event.getPlayer();
+					backDto.setUUID(player.getUniqueId().toString());
+					backDto.setX(player.getLocation().getX());
+					backDto.setY(player.getLocation().getY());
+					backDto.setZ(player.getLocation().getZ());
+					backDto.setWorld(player.getWorld().getName());
+					try {
+						cm.insertBack(backDto);
+					} catch (SQLException e) {
+						// TODO Auto-generated catch block
+						event.setJoinMessage(ChatColor.RED + "[ 유저 권한 승인 실패 ]");
+					}
+				}
+			}.runTask(melonSlave);
+		}
 	}
 
 	@EventHandler
-	public void onPlayerDeath(PlayerDeathEvent event) {
+	public void onPlayerDeath(PlayerDeathEvent event) throws SQLException {
 		minecraft_tc = jda.getTextChannelsByName("minecraft_chat", true).get(0);
+		BackDTO backDTO = new BackDTO();
+		cm = new ConnectManager();
 		int x = event.getEntity().getLocation().getBlockX();
 		int y = event.getEntity().getLocation().getBlockY();
 		int z = event.getEntity().getLocation().getBlockZ();
+		backDTO.setX((double) x);
+		backDTO.setY((double) y);
+		backDTO.setZ((double) z);
+		backDTO.setUUID(event.getEntity().getUniqueId().toString());
+		backDTO.setWorld(event.getEntity().getWorld().getName().toString());
+		if(cm.saveBack(backDTO)) {
+			event.getEntity().sendMessage(ChatColor.GREEN + "마지막으로 죽은곳이 저장되었습니다");;
+		}
 		event.getEntity().sendMessage(ChatColor.GREEN + "사망좌표\nX: " + x + " Y: " + y + " Z: " + z);
 		minecraft_tc.sendMessage(event.getEntity().getPlayer().getName()+"님의 사망좌표\nX: " + x + " Y: " + y + " Z: " + z).queue();
 	}
